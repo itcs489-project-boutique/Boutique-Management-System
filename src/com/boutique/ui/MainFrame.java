@@ -6,6 +6,7 @@ import com.boutique.service.AuthService;
 import com.boutique.ui.auth.ChangePasswordPanel;
 import com.boutique.ui.auth.LoginFrame;
 import com.boutique.ui.auth.SignUpPanel;
+import com.boutique.ui.product.ProductPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -88,8 +89,8 @@ public class MainFrame extends JFrame {
             ? Session.getCurrentUser().getRole()
             : null;
 
-        // ── Member 1: Products nav (added at CP2.3) ──
-        // placeholder — will be wired in CP2.3
+        // Abdulaziz: Products nav
+        addNavItem("Products", () -> showPanel(new ProductPanel()));
 
         // ── Member 2: Customers nav (added at CP2.6) ──
         // placeholder — will be wired in CP2.6
