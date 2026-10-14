@@ -6,6 +6,7 @@ import com.boutique.model.Customer;
 import com.boutique.model.Order;
 import com.boutique.model.OrderItem;
 import com.boutique.enums.Role;
+import com.boutique.util.PasswordUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,14 +45,14 @@ public class DataStore {
 
     // ── Seed Data ──────────────────────────────────────────────────────────────
 
-    private void seedData() {
-        // Default admin account — password is "admin123" (will be hashed in AuthService)
-        users.add(new User(
-            IdGenerator.nextUserId(),
-            "admin",
-            "240be518fabd2724ddb6f04eeb1da5967448d7e831d1d2b8e7e7bb1a7d9e8b10",
-            "System Administrator",
-            Role.ADMIN
-        ));
-    }
+private void seedData() {
+    // Default admin account — password: "admin123"
+    users.add(new User(
+        IdGenerator.nextUserId(),
+        "admin",
+        PasswordUtil.hash("admin123"),
+        "System Administrator",
+        Role.ADMIN
+    ));
+}
 }
