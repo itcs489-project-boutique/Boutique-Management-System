@@ -7,6 +7,7 @@ import com.boutique.ui.auth.ChangePasswordPanel;
 import com.boutique.ui.auth.LoginFrame;
 import com.boutique.ui.auth.SignUpPanel;
 import com.boutique.ui.product.ProductPanel;
+import com.boutique.ui.customer.CustomerPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -93,7 +94,7 @@ public class MainFrame extends JFrame {
         addNavItem("Products", () -> showPanel(new ProductPanel()));
 
         // ── Member 2: Customers nav (added at CP2.6) ──
-        // placeholder — will be wired in CP2.6
+        addNavItem("Customers", () -> showPanel(new CustomerPanel()));
 
         // ── Member 3: Orders nav (added at CP2.9) ──
         // placeholder — will be wired in CP2.9
