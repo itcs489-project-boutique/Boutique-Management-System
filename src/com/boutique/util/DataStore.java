@@ -55,4 +55,12 @@ private void seedData() {
         Role.ADMIN
     ));
 }
+
+// clear everything to prep for test starting state
+public void reset(){
+        users.clear();
+        products.clear();
+        seedData();
+}
+
 }
