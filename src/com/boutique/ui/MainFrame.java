@@ -8,6 +8,7 @@ import com.boutique.ui.auth.LoginFrame;
 import com.boutique.ui.auth.SignUpPanel;
 import com.boutique.ui.product.ProductPanel;
 import com.boutique.ui.customer.CustomerPanel;
+import com.boutique.ui.order.OrderPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -96,8 +97,8 @@ public class MainFrame extends JFrame {
         // ── Member 2: Customers nav (added at CP2.6) ──
         addNavItem("Customers", () -> showPanel(new CustomerPanel()));
 
-        // ── Member 3: Orders nav (added at CP2.9) ──
-        // placeholder — will be wired in CP2.9
+        // --- Member 3: Orders ---
+        addNavItem("Orders", () -> showPanel(new OrderPanel()));
 
         // ── Admin-only: User Management ──
         if (role == Role.ADMIN) {

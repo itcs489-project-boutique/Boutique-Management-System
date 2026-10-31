@@ -3,6 +3,7 @@ package com.boutique.ui.order;
 import com.boutique.model.Customer;
 import com.boutique.model.Order;
 import com.boutique.model.OrderItem;
+import com.boutique.model.Product;
 import com.boutique.service.CustomerService;
 import com.boutique.service.OrderService;
 import com.boutique.service.ProductService;
@@ -37,7 +38,12 @@ public class OrderDetailPanel extends JPanel {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         for (OrderItem i : orders.getOrderItems(order.getOrderId())) {
-            String name = products.getProductById(i.getProductId()).map(p -> p.getName()).orElse(i.getProductId());
+            // Include deactivated products so old orders still show the product name
+            String name = products.getAllProductsIncludingInactive().stream()
+                    .filter(p -> p.getProductId().equals(i.getProductId()))
+                    .map(Product::getName)
+                    .findFirst()
+                    .orElse(i.getProductId());
             model.addRow(new Object[]{name, String.format("%.3f", i.getUnitPrice()), i.getQuantity(),
                     String.format("%.3f", i.getSubtotal())});
         }

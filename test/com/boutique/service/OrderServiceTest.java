@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * JUnit tests for OrderService (FR3.1-FR3.6, FR4.1-FR4.2).
+ * JUnit tests for OrderService (FR3.1-FR3.6, FR4.1-FR4.2, FR5.2).
  * Only the two seed helpers at the bottom touch Product/Customer constructors:
  * adjust them if your teammates' classes differ.
  */
@@ -47,6 +47,10 @@ class OrderServiceTest {
         assertFalse(service.createOrder(inactive).isSuccess());
     }
 
+    @Test void createOrderRejectsBlankCustomerId() {
+        assertFalse(service.createOrder("  ").isSuccess());
+    }
+
     // ---- FR3.2 / FR3.3 add items + total
     @Test void addItemsAndCalculateTotal() {
         String oid = service.createOrder(customerId).getValue().getOrderId();
@@ -54,6 +58,11 @@ class OrderServiceTest {
         assertTrue(service.addItemToOrder(oid, bagId, 1).isSuccess());     // 20
         assertEquals(2, service.getOrderItems(oid).size());
         assertEquals(120.0, service.getOrderTotal(oid), 0.001);
+    }
+
+    @Test void emptyOrderTotalIsZero() {
+        String oid = service.createOrder(customerId).getValue().getOrderId();
+        assertEquals(0.0, service.getOrderTotal(oid), 0.001);
     }
 
     @Test void addingSameProductTwiceSumsQuantity() {
@@ -80,6 +89,17 @@ class OrderServiceTest {
         String oid = service.createOrder(customerId).getValue().getOrderId();
         service.addItemToOrder(oid, dressId, 1);
         assertEquals(50.0, service.getOrderItems(oid).get(0).getUnitPrice(), 0.001);
+    }
+
+    @Test void addItemRejectedOutsideCart() {
+        String oid = readyPendingOrder();
+        assertFalse(service.addItemToOrder(oid, bagId, 1).isSuccess());
+    }
+
+    @Test void addItemRejectsInactiveProduct() {
+        String oid = service.createOrder(customerId).getValue().getOrderId();
+        new ProductDAO().deactivate(bagId);
+        assertFalse(service.addItemToOrder(oid, bagId, 1).isSuccess());
     }
 
     // ---- FR4.1 / FR4.2 checkout
@@ -130,6 +150,14 @@ class OrderServiceTest {
         assertFalse(service.confirmOrder(oid).isSuccess());
     }
 
+    @Test void confirmFailsWhenStockRanOutAndDeductsNothing() {
+        String oid = readyPendingOrder();                         // 2 dresses
+        new ProductDAO().findById(dressId).get().setStockQuantity(1);
+        assertFalse(service.confirmOrder(oid).isSuccess());
+        assertEquals(OrderStatus.PENDING, service.getOrderById(oid).get().getStatus());
+        assertEquals(1, new ProductDAO().findById(dressId).get().getStockQuantity());
+    }
+
     // ---- declined payment flow
     @Test void declinedPaymentCanBeRetried() {
         String oid = readyPendingOrder();
@@ -137,6 +165,11 @@ class OrderServiceTest {
         assertEquals(OrderStatus.PAYMENT_FAILED, service.getOrderById(oid).get().getStatus());
         assertTrue(service.retryCheckout(oid).isSuccess());
         assertEquals(OrderStatus.PENDING, service.getOrderById(oid).get().getStatus());
+    }
+
+    @Test void markPaymentFailedRequiresPending() {
+        String oid = service.createOrder(customerId).getValue().getOrderId();   // CART
+        assertFalse(service.markPaymentFailed(oid).isSuccess());
     }
 
     // ---- FR3.6 cancel
@@ -159,6 +192,19 @@ class OrderServiceTest {
         service.confirmOrder(oid);
         service.getOrderById(oid).get().setStatus(OrderStatus.SHIPPED);
         assertFalse(service.cancelOrder(oid).isSuccess());
+    }
+
+    @Test void cartOrderCannotBeCancelled() {
+        String oid = service.createOrder(customerId).getValue().getOrderId();
+        assertFalse(service.cancelOrder(oid).isSuccess());
+    }
+
+    // ---- customer orders
+    @Test void getOrdersByCustomerReturnsOnlyThatCustomersOrders() {
+        String other = seedCustomer("C3", true);
+        service.createOrder(customerId);
+        service.createOrder(other);
+        assertEquals(1, service.getOrdersByCustomer(customerId).size());
     }
 
     // ---- FR5.2 queue

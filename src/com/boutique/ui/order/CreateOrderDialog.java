@@ -22,7 +22,9 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Presentation layer for FR3.1-FR3.3 and the whole checkout flow (FR4).
@@ -40,6 +42,8 @@ public class CreateOrderDialog extends JDialog {
 
     private final CardLayout cards = new CardLayout();
     private final JPanel root = new JPanel(cards);
+    /** Remembers the panel currently registered under each card name (see showScreen). */
+    private final Map<String, Component> screens = new HashMap<>();
     private final JTextField customerSearch = new JTextField(10);
     private final JButton customerSearchButton = new JButton("Find");
     private final JComboBox<Customer> customerBox = new JComboBox<>();
@@ -76,6 +80,17 @@ public class CreateOrderDialog extends JDialog {
         });
         loadCustomers("");
         loadProducts();
+    }
+
+    /**
+     * Shows a screen under the given card name. Any older panel registered under the
+     * same name is removed first, so retries (Try Again / Back) never stack stale panels.
+     */
+    private void showScreen(String name, Component panel) {
+        Component old = screens.put(name, panel);
+        if (old != null) root.remove(old);
+        root.add(panel, name);
+        cards.show(root, name);
     }
 
     /** Screen 1: find a customer, search products, add them, see the running total. */
@@ -157,9 +172,16 @@ public class CreateOrderDialog extends JDialog {
         totalLabel.setText(String.format("Total: %.3f", orders.getOrderTotal(current.getOrderId())));
     }
 
-    /** @return the product name of a line, or its id if the product no longer exists */
+    /**
+     * @return the product name of a line (also for deactivated products),
+     *         or its id if the product no longer exists
+     */
     private String productName(OrderItem i) {
-        return products.getProductById(i.getProductId()).map(Product::getName).orElse(i.getProductId());
+        return products.getAllProductsIncludingInactive().stream()
+                .filter(p -> p.getProductId().equals(i.getProductId()))
+                .map(Product::getName)
+                .findFirst()
+                .orElse(i.getProductId());
     }
 
     /** @return one text line per order item plus the total, used in summaries */
@@ -189,8 +211,8 @@ public class CreateOrderDialog extends JDialog {
         Result<Order> r = orders.initiateCheckout(current.getOrderId());
         if (!r.isSuccess()) { error(r.getErrorMessage()); return; }
         Customer c = customers.getCustomerById(current.getCustomerId());   // null if not found
-        root.add(new AddressPanel(c == null ? "" : c.getAddress(), this::saveAddress, this::backToCart), "address");
-        cards.show(root, "address");
+        showScreen("address",
+                new AddressPanel(c == null ? "" : c.getAddress(), this::saveAddress, this::backToCart));
     }
 
     /** Back from address: order returns to CART so items can be edited again (FR4.1). */
@@ -204,15 +226,13 @@ public class CreateOrderDialog extends JDialog {
         Result<Order> r = orders.setDeliveryAddress(current.getOrderId(), address);
         if (!r.isSuccess()) { error(r.getErrorMessage()); return; }
         paymentPanel = new PaymentPanel(orders.getOrderTotal(current.getOrderId()), this::pay);
-        root.add(paymentPanel, "payment");
-        cards.show(root, "payment");
+        showScreen("payment", paymentPanel);
     }
 
     /** FR4.4: runs the bank simulation in a SwingWorker and shows the processing screen. */
     private void pay(String cardNumber) {
         processing = true;                                // blocks closing the window
-        root.add(new ProcessingPanel(), "processing");
-        cards.show(root, "processing");
+        showScreen("processing", new ProcessingPanel());
         new SwingWorker<PaymentResult, Void>() {
             @Override protected PaymentResult doInBackground() { return payments.process(cardNumber); }
             @Override protected void done() {
@@ -228,16 +248,16 @@ public class CreateOrderDialog extends JDialog {
         if (result == PaymentResult.APPROVED) {
             Result<Order> r = orders.confirmOrder(id);
             if (!r.isSuccess()) { error(r.getErrorMessage()); cards.show(root, "payment"); return; }
-            root.add(PaymentResultPanel.approved(r.getValue(), itemsText(id), this::trackOrder, this::dispose), "result");
+            showScreen("result",
+                    PaymentResultPanel.approved(r.getValue(), itemsText(id), this::trackOrder, this::dispose));
         } else {
             orders.markPaymentFailed(id);
-            root.add(PaymentResultPanel.declined(() -> {
+            showScreen("result", PaymentResultPanel.declined(() -> {
                 orders.retryCheckout(id);               // PAYMENT_FAILED -> PENDING
                 paymentPanel.reset();
                 cards.show(root, "payment");
-            }), "result");
+            }));
         }
-        cards.show(root, "result");
     }
 
     /** "Track Order": closes the dialog and shows the customer's orders in the main window. */

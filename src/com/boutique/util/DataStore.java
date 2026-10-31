@@ -6,7 +6,6 @@ import com.boutique.model.Customer;
 import com.boutique.model.Order;
 import com.boutique.model.OrderItem;
 import com.boutique.enums.Role;
-import com.boutique.util.PasswordUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +15,7 @@ import java.util.List;
  * All service classes read from and write to this shared instance.
  */
 public class DataStore {
+
     private static DataStore instance;
 
     private final List<User>      users      = new ArrayList<>();
@@ -36,7 +36,6 @@ public class DataStore {
     }
 
     // ── Accessors ──────────────────────────────────────────────────────────────
-
     public List<User>      getUsers()      { return users; }
     public List<Product>   getProducts()   { return products; }
     public List<Customer>  getCustomers()  { return customers; }
@@ -44,15 +43,27 @@ public class DataStore {
     public List<OrderItem> getOrderItems() { return orderItems; }
 
     // ── Seed Data ──────────────────────────────────────────────────────────────
+    private void seedData() {
+        // Default admin account — password: "admin123"
+        users.add(new User(
+            IdGenerator.nextUserId(),
+            "admin",
+            PasswordUtil.hash("admin123"),
+            "System Administrator",
+            Role.ADMIN
+        ));
+    }
 
-private void seedData() {
-    // Default admin account — password: "admin123"
-    users.add(new User(
-        IdGenerator.nextUserId(),
-        "admin",
-        PasswordUtil.hash("admin123"),
-        "System Administrator",
-        Role.ADMIN
-    ));
-}
+    /**
+     * Clears every list and re-seeds the default admin.
+     * Used by tests to start from a clean state.
+     */
+    public void reset() {
+        users.clear();
+        products.clear();
+        customers.clear();
+        orders.clear();
+        orderItems.clear();
+        seedData();
+    }
 }
