@@ -125,7 +125,7 @@ public class ProductService {
 
     /** Finds a single active product by ID. */
     public Optional<Product> getProductById(String productId) {
-        return productDAO.findById(productId);
+        return productDAO.findById(productId).filter(Product::isActive);
     }
 
         /**
