@@ -1,7 +1,6 @@
 package com.boutique.ui.tracking;
 
 import com.boutique.model.Customer;
-import com.boutique.model.Order;
 import com.boutique.enums.OrderStatus;
 import com.boutique.service.CustomerService;
 import com.boutique.service.OrderService;
