@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  junit-tests:
+    name: JUnit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download JUnit Console Launcher
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci/classes"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ci/junit-console.jar" \
+          https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.0/junit-platform-console-standalone-1.10.0.jar
+
+      - name: Compile
+        run: |
+          find src test/com -name '*.java' > "$RUNNER_TEMP/ci/sources.txt"
+          javac -d "$RUNNER_TEMP/ci/classes" -cp "$RUNNER_TEMP/ci/junit-console.jar" @"$RUNNER_TEMP/ci/sources.txt"
+
+      - name: Ensure virtual display is available
+        run: command -v xvfb-run || (sudo apt-get update && sudo apt-get install -y xvfb)
+
+      - name: Run JUnit tests
+        run: |
+          xvfb-run -a java -jar "$RUNNER_TEMP/ci/junit-console.jar" execute \
+            --class-path "$RUNNER_TEMP/ci/classes" \
+            --select-package com.boutique \
+            --fail-if-no-tests \
+            --details=summary
